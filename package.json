@@ -1,0 +1,7 @@
+{
+  "name": "phone",
+  "license": "MIT",
+  "type": "module",
+  "bin": { "phone": "src/cli.ts" },
+  "devDependencies": { "@types/bun": "latest", "typescript": "^5.6.0" }
+}

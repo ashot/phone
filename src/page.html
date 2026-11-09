@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Call log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Caveat:wght@500;700&family=Recursive:slnt,wght,CASL,MONO@-15..0,300..800,0..1,0..1&display=swap" rel="stylesheet">
+<style>
+:root {
+  --desk: #efe9dc;
+  --desk-2: #e6dfcf;
+  --slip: #ffd5de;
+  --slip-deep: #f7b9c7;
+  --rule: #e2698a;
+  --ink: #1c2b5e;
+  --pencil: #6d6557;
+  --faint: #a39a88;
+  --them: #d63d6b;
+  --agent: #2d59d1;
+  --note: #fff1a6;
+  --hl: #ffe45c;
+  --ok: #23845a;
+  --bad: #c6322f;
+  --muted-stamp: #7d7568;
+  --sans: "Recursive", ui-sans-serif, sans-serif;
+  --display: "Bricolage Grotesque", "Recursive", sans-serif;
+  --hand: "Caveat", "Bradley Hand", cursive;
+}
+* { box-sizing: border-box; }
+html { background: var(--desk); }
+body {
+  margin: 0; color: var(--ink); font-family: var(--sans); font-variation-settings: "CASL" 0.5;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255,255,255,.55), transparent 40%),
+    radial-gradient(circle at 90% 90%, rgba(214,61,107,.07), transparent 45%),
+    repeating-linear-gradient(90deg, transparent 0 46px, rgba(28,43,94,.035) 46px 47px),
+    var(--desk);
+  min-height: 100vh;
+}
+.mono { font-variation-settings: "MONO" 1, "CASL" 0; }
+a { color: inherit; }
+button { font: inherit; color: inherit; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 40px 28px 120px; }
+
+/* ---------- log ---------- */
+.log-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; margin-bottom: 28px; }
+.log-head h1 { font-family: var(--display); font-weight: 800; font-size: clamp(44px, 7vw, 84px); line-height: .9; letter-spacing: -0.03em; margin: 0; }
+.log-head h1 span { display: inline-block; background: var(--slip); padding: 0 .12em; transform: rotate(-1.5deg); box-shadow: 3px 3px 0 var(--ink); }
+.tally { font-size: 15px; color: var(--pencil); margin-top: 12px; }
+.tally b { color: var(--ink); font-weight: 700; }
+.tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.search { border: 2px solid var(--ink); background: #fffdf7; border-radius: 999px; padding: 9px 16px; font: inherit; font-size: 15px; width: 240px; color: var(--ink); outline: none; }
+.search:focus { box-shadow: 3px 3px 0 var(--ink); }
+.chip { border: 2px solid var(--ink); border-radius: 999px; padding: 7px 14px; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--desk); }
+.day { font-family: var(--display); font-weight: 800; font-size: 22px; margin: 34px 0 14px; display: flex; align-items: center; gap: 14px; }
+.day::after { content: ""; flex: 1; border-top: 2px dashed var(--faint); }
+.slips { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 22px; }
+.slip {
+  position: relative; display: block; text-decoration: none; background: var(--slip); border-radius: 4px;
+  padding: 18px 20px 16px 30px; box-shadow: 0 1px 0 rgba(0,0,0,.08), 0 10px 22px -14px rgba(28,43,94,.5);
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .18s; cursor: pointer;
+  animation: drop .5s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i) * 45ms);
+}
+.slip::before { /* perforation */
+  content: ""; position: absolute; left: 8px; top: 10px; bottom: 10px; width: 8px;
+  background: radial-gradient(circle, var(--desk) 3px, transparent 3.5px) 0 0 / 8px 14px repeat-y;
+}
+.slip:hover { transform: translateY(-3px) rotate(-.4deg); box-shadow: 0 1px 0 rgba(0,0,0,.08), 0 18px 28px -16px rgba(28,43,94,.6); }
+.slip.dim { background: #eee4e0; }
+.slip-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.slip-time { font-size: 12.5px; color: var(--pencil); border-bottom: 1.5px solid var(--rule); padding: 4px 0 7px; margin-bottom: 10px; }
+.slip-num { font-family: var(--hand); font-weight: 700; font-size: 30px; line-height: 1; white-space: nowrap; }
+.slip-dir { font-size: 12px; color: var(--pencil); margin-right: 6px; font-weight: 600; }
+.slip-brief { font-size: 14px; line-height: 1.4; margin: 0 0 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.slip-out { font-family: var(--hand); font-size: 21px; line-height: 1.12; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; min-height: 1em; }
+.boxes { display: flex; gap: 12px; margin-top: 12px; font-size: 12px; color: var(--pencil); font-weight: 600; flex-wrap: wrap; }
+.box { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.box i { width: 13px; height: 13px; border: 1.5px solid var(--ink); display: inline-grid; place-items: center; font-style: normal; font-family: var(--hand); font-size: 20px; line-height: 0; color: var(--ink); }
+.stamp {
+  flex: none; transform: rotate(-7deg);
+  border: 3px solid currentColor; border-radius: 6px; padding: 3px 9px; font-family: var(--display); font-weight: 800;
+  font-size: 15px; letter-spacing: .04em; text-transform: uppercase; opacity: .82; mix-blend-mode: multiply;
+  -webkit-mask: radial-gradient(circle at 30% 40%, #000 60%, rgba(0,0,0,.75) 61%) ;
+}
+.stamp.ok { color: var(--ok); } .stamp.bad { color: var(--bad); } .stamp.meh { color: var(--muted-stamp); } .stamp.live { color: var(--agent); animation: pulse 1.4s ease-in-out infinite; }
+.empty { font-family: var(--hand); font-size: 30px; color: var(--pencil); padding: 60px 0; text-align: center; }
+
+/* ---------- call ---------- */
+.back { display: inline-flex; gap: 8px; align-items: center; font-weight: 700; text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: 22px; }
+.back:hover { border-color: var(--ink); }
+.call { display: grid; grid-template-columns: 370px 1fr; gap: 34px; align-items: start; }
+@media (max-width: 900px) { .call { grid-template-columns: 1fr; } .side { position: static !important; } }
+.side { position: sticky; top: 24px; }
+.big-slip { background: var(--slip); padding: 22px 24px 20px; border-radius: 4px; position: relative; box-shadow: 0 16px 30px -20px rgba(28,43,94,.7); }
+.big-slip h2 { font-family: var(--display); font-weight: 800; font-size: 30px; line-height: .95; margin: 0 0 16px; letter-spacing: -.01em; }
+.field { display: grid; grid-template-columns: 70px 1fr; align-items: end; border-bottom: 1.5px solid var(--rule); padding: 6px 0 2px; }
+.field span { font-size: 12px; font-weight: 700; color: var(--pencil); padding-bottom: 5px; }
+.field b { font-family: var(--hand); font-weight: 700; font-size: 25px; line-height: 1.05; }
+.big-slip .boxes { margin: 14px 0 6px; flex-wrap: wrap; }
+.msg-label { font-size: 12px; font-weight: 700; color: var(--pencil); margin-top: 14px; }
+.msg { font-family: var(--hand); font-size: 23px; line-height: 30px; margin: 2px 0 0; background: repeating-linear-gradient(transparent 0 29px, var(--rule) 29px 30px); }
+.big-slip .stamp { position: absolute; top: 20px; right: 18px; font-size: 18px; animation: thunk .45s cubic-bezier(.3,1.6,.5,1) both .15s; }
+details { margin-top: 16px; background: #fffdf7; border: 2px solid var(--ink); border-radius: 6px; }
+details summary { cursor: pointer; padding: 10px 14px; font-weight: 700; font-size: 14px; list-style: none; display: flex; justify-content: space-between; }
+details summary::after { content: "+"; font-family: var(--display); font-weight: 800; }
+details[open] summary::after { content: "–"; }
+details .body { padding: 0 14px 14px; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
+.meta-line { font-size: 12px; color: var(--pencil); margin-top: 12px; word-break: break-all; }
+
+.player { position: sticky; top: 0; z-index: 5; background: rgba(239,233,220,.92); backdrop-filter: blur(8px); padding: 16px 0 14px; margin-bottom: 8px; border-bottom: 2px solid var(--ink); }
+.controls { display: flex; align-items: center; gap: 14px; }
+.play { width: 52px; height: 52px; border-radius: 50%; border: none; background: var(--ink); color: var(--desk); cursor: pointer; display: grid; place-items: center; flex: none; transition: transform .12s; }
+.play:active { transform: scale(.94); }
+.play svg { width: 20px; height: 20px; }
+.clock { font-size: 15px; min-width: 104px; }
+.speed { border: 2px solid var(--ink); background: transparent; border-radius: 999px; padding: 4px 10px; font-weight: 700; font-size: 13px; cursor: pointer; }
+.legend { margin-left: auto; display: flex; gap: 14px; font-size: 13px; font-weight: 600; color: var(--pencil); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.strip { position: relative; height: 44px; margin-top: 14px; background: #fffdf7; border: 2px solid var(--ink); border-radius: 6px; cursor: pointer; overflow: hidden; }
+.seg { position: absolute; top: 7px; bottom: 7px; border-radius: 3px; opacity: .85; }
+.seg.them { background: var(--them); top: 5px; bottom: 23px; }
+.seg.agent { background: var(--agent); top: 23px; bottom: 5px; }
+.flag { position: absolute; top: 0; bottom: 0; width: 2px; background: #c9a400; }
+.flag::after { content: ""; position: absolute; top: 0; left: 2px; width: 9px; height: 8px; background: var(--note); border: 1.5px solid #c9a400; }
+.head { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); pointer-events: none; transition: left .12s linear; }
+.hover-tip { position: absolute; top: -34px; transform: translateX(-50%); background: var(--ink); color: var(--desk); font-size: 12px; padding: 3px 8px; border-radius: 4px; pointer-events: none; white-space: nowrap; opacity: 0; transition: opacity .1s; }
+.no-audio { font-size: 14px; color: var(--pencil); padding: 6px 0; }
+
+.lines { margin-top: 14px; }
+.line { display: grid; grid-template-columns: 62px 1fr; gap: 12px; padding: 9px 12px; border-radius: 6px; position: relative; transition: background .2s; }
+.line .t { font-size: 13px; color: var(--pencil); padding-top: 3px; border: none; background: none; text-align: left; cursor: pointer; }
+.line .t:hover { color: var(--ink); text-decoration: underline; }
+.no-rec .line .t { cursor: default; text-decoration: none; }
+.who { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.line.them .who { color: var(--them); }
+.line.agent .who { color: var(--agent); }
+.line.agent { margin-left: 36px; }
+.line.agent .txt { border-left: 3px solid var(--agent); padding-left: 12px; }
+.line.them .txt { border-left: 3px solid var(--them); padding-left: 12px; }
+.txt p { margin: 2px 0 0; font-size: 16px; line-height: 1.5; }
+.cut { font-size: 11px; font-weight: 700; color: var(--pencil); border: 1.5px dashed var(--faint); border-radius: 4px; padding: 0 5px; margin-left: 6px; vertical-align: 2px; }
+.line.active { background: linear-gradient(100deg, rgba(255,228,92,.0) 0%, rgba(255,228,92,.85) 4%, rgba(255,228,92,.7) 96%, rgba(255,228,92,0) 100%); animation: sweep .35s ease-out; }
+.line.hit { outline: 2px solid var(--ink); }
+.note { margin: 6px 0 6px 74px; background: var(--note); padding: 9px 14px; font-size: 14px; line-height: 1.4; box-shadow: 0 6px 12px -8px rgba(0,0,0,.4); transform: rotate(-.5deg); max-width: 560px; border-radius: 2px; }
+.note:nth-of-type(even) { transform: rotate(.6deg); }
+.note b { font-family: var(--display); font-weight: 800; margin-right: 6px; }
+.note.error { background: #ffd2cc; }
+.end { margin: 18px 0 0 74px; font-family: var(--hand); font-size: 24px; color: var(--pencil); }
+.kbd { font-size: 12px; color: var(--pencil); margin-top: 26px; }
+.kbd kbd { font-family: inherit; border: 1.5px solid var(--faint); border-bottom-width: 3px; border-radius: 4px; padding: 0 5px; margin: 0 2px; }
+
+@keyframes drop { from { opacity: 0; transform: translateY(14px) rotate(1deg); } }
+@keyframes thunk { from { opacity: 0; transform: scale(1.8) rotate(-18deg); } }
+@keyframes pulse { 50% { opacity: .35; } }
+@keyframes sweep { from { background-size: 0% 100%; background-repeat: no-repeat; } to { background-size: 100% 100%; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<audio id="audio" preload="metadata"></audio>
+<script type="application/json" id="data">/*__DATA__*/</script>
+<script>
+const DATA = JSON.parse(document.getElementById("data").textContent);
+const app = document.getElementById("app");
+const audio = document.getElementById("audio");
+const $ = (tag, attrs = {}, ...kids) => {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "style") el.style.cssText = v;
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  return el;
+};
+const clock = (s) => { s = Math.max(0, Math.floor(s || 0)); return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`; };
+const human = (s) => s >= 60 ? `${Math.floor(s / 60)}m ${String(Math.round(s % 60)).padStart(2, "0")}s` : `${Math.round(s)}s`;
+const fmtPhone = (n) => { const m = /^\+1(\d{3})(\d{3})(\d{4})$/.exec(n || ""); return m ? `(${m[1]}) ${m[2]}-${m[3]}` : n; };
+const firstLine = (s) => (s || "").split("\n").find((l) => l.trim()) || "";
+const dayKey = (t) => new Date(t).toDateString();
+const dayLabel = (t) => {
+  const d = new Date(t), now = new Date();
+  const diff = Math.round((new Date(now.toDateString()) - new Date(d.toDateString())) / 864e5);
+  return diff === 0 ? "Today" : diff === 1 ? "Yesterday" : d.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+};
+const verdict = (c) => {
+  if (!["ended", "failed", "ending"].includes(c.state)) return ["live", "Live"];
+  if (!c.connected) return ["bad", c.status];
+  const g = c.result?.goal_achieved;
+  if (g === "success") return ["ok", "Done"];
+  if (g === "failure") return ["bad", "Not done"];
+  if (!c.lines.length) return ["meh", "Hung up"];
+  return ["meh", "Talked"];
+};
+const box = (on, label) => $("span", { class: "box" }, $("i", {}, on ? "✓" : ""), label);
+const audioSrc = (c) => `${DATA.base}calls/${c.id}/${c.recording}`;
+
+// ---------- log ----------
+let filter = "all", query = "";
+function renderLog() {
+  document.title = "Call log";
+  audio.pause();
+  const calls = DATA.calls;
+  const talked = calls.reduce((s, c) => s + (c.connected ? c.duration || 0 : 0), 0);
+  const connected = calls.filter((c) => c.connected).length;
+  const shown = calls.filter((c) => {
+    if (filter === "connected" && !c.connected) return false;
+    if (filter === "missed" && c.connected) return false;
+    if (filter === "incoming" && c.mode !== "inbound") return false;
+    if (!query) return true;
+    const hay = [c.number, fmtPhone(c.number), c.goal, c.result?.outcome, c.result?.summary, c.status, c.id].join(" ").toLowerCase();
+    return hay.includes(query.toLowerCase());
+  });
+  const chips = [["all", "All"], ["connected", "Connected"], ["missed", "Didn't connect"], ["incoming", "Incoming"]].map(([k, label]) =>
+    $("button", { class: "chip", "aria-pressed": String(filter === k), onclick: () => { filter = k; renderLog(); } }, label));
+  const search = $("input", { class: "search", placeholder: "Search numbers, briefs, outcomes", value: query, oninput: (e) => { query = e.target.value; renderLog(); document.querySelector(".search").focus(); } });
+  app.replaceChildren(
+    $("div", { class: "log-head" },
+      $("div", {}, $("h1", {}, $("span", {}, "Call log")),
+        $("div", { class: "tally" }, $("b", {}, calls.length), " calls · ", $("b", {}, connected), " connected · ", $("b", {}, human(talked)), " on the phone")),
+      $("div", { class: "tools" }, search, ...chips)),
+    shown.length ? groupByDay(shown) : $("div", { class: "empty" }, calls.length ? "Nothing matches." : "No calls yet."));
+  const s = document.querySelector(".search"); s.setSelectionRange(query.length, query.length);
+}
+function groupByDay(calls) {
+  const frag = document.createDocumentFragment();
+  let i = 0, current = null, grid = null;
+  for (const c of calls) {
+    if (dayKey(c.created) !== current) {
+      current = dayKey(c.created);
+      frag.append($("div", { class: "day" }, dayLabel(c.created)));
+      grid = $("div", { class: "slips" });
+      frag.append(grid);
+    }
+    grid.append(slip(c, i++));
+  }
+  return frag;
+}
+function slip(c, i) {
+  const [cls, label] = verdict(c);
+  const time = new Date(c.created).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const out = c.result?.outcome || (c.connected ? c.result?.summary : c.ended_reason) || "";
+  return $("a", { class: `slip${c.connected ? "" : " dim"}`, href: `#${c.id}`, style: `--i:${Math.min(i, 14)}` },
+    $("div", { class: "slip-top" },
+      $("div", {}, $("span", { class: "slip-dir" }, c.mode === "outbound" ? "TO" : "FROM"), $("span", { class: "slip-num" }, fmtPhone(c.number))),
+      $("div", { class: `stamp ${cls}` }, label)),
+    $("div", { class: "slip-time mono" }, `${time} · ${c.status}`),
+    $("p", { class: "slip-brief" }, firstLine(c.goal)),
+    $("div", { class: "slip-out" }, out),
+    $("div", { class: "boxes" },
+      box(c.connected, "Answered"), box(c.result?.goal_achieved === "success", "Goal met"), box(!!c.recording, "Recorded")));
+}
+
+// ---------- call ----------
+function renderCall(c) {
+  document.title = `Call ${fmtPhone(c.number)}`;
+  const [cls, label] = verdict(c);
+  const when = new Date(c.created);
+  const hasAudio = !!c.recording;
+  const r = c.result || {};
+  const side = $("aside", { class: "side" },
+    $("div", { class: "big-slip" },
+      $("h2", {}, "While you", $("br"), "were out"),
+      $("div", { class: `stamp ${cls}` }, label),
+      field(c.mode === "outbound" ? "Called" : "From", fmtPhone(c.number)),
+      field(c.mode === "outbound" ? "From" : "To", fmtPhone(c.from)),
+      field("Date", when.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })),
+      field("Time", when.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })),
+      field("Length", c.connected ? human(c.duration || 0) : c.status),
+      $("div", { class: "boxes" },
+        box(c.connected, "Answered"), box(r.goal_achieved === "success", "Goal met"),
+        box(r.goal_achieved === "failure" || (!c.connected && ["ended", "failed"].includes(c.state)), "Needs follow-up")),
+      $("div", { class: "msg-label" }, "MESSAGE"),
+      $("p", { class: "msg" }, r.outcome || (c.connected ? r.summary : c.ended_reason) || "No outcome recorded.")),
+    r.summary && $("details", { open: true }, $("summary", {}, "Summary"), $("div", { class: "body" }, r.summary)),
+    r.rationale && $("details", {}, $("summary", {}, `Goal ${r.goal_achieved === "success" ? "met" : "check"}: why`), $("div", { class: "body" }, r.rationale)),
+    $("details", {}, $("summary", {}, "The brief"), $("div", { class: "body" }, c.goal)),
+    $("div", { class: "meta-line mono" }, `phone transcript ${c.id}`, hasAudio ? ` · ~/.phone/calls/${c.id}/${c.recording}` : ""));
+
+  const main = $("section", { class: hasAudio ? "" : "no-rec" });
+  if (hasAudio) main.append(player(c)); else main.append($("div", { class: "player" }, $("div", { class: "no-audio" }, c.connected ? "No recording for this call (placed before recording was on, or with --no-record)." : "This call never connected.")));
+  const items = [
+    ...c.lines.map((l, i) => ({ at: l.at, order: i, el: lineEl(l, i) })),
+    ...c.notes.map((n, i) => ({ at: n.at, order: 1e4 + i, el: noteEl(n) })),
+  ].sort((a, b) => (a.at ?? Infinity) - (b.at ?? Infinity) || a.order - b.order);
+  const lines = $("div", { class: "lines" }, items.map((x) => x.el));
+  if (c.connected) lines.append($("div", { class: "end" }, `Call ended at ${clock(c.duration)}: ${c.ended_reason || ""}`));
+  main.append(lines, $("div", { class: "kbd" }, hasAudio ? [$("kbd", {}, "space"), " play/pause  ", $("kbd", {}, "←"), $("kbd", {}, "→"), " 5 seconds  ", $("kbd", {}, "j"), $("kbd", {}, "k"), " next/previous line  "] : "", $("kbd", {}, "esc"), " back to the log"));
+
+  app.replaceChildren($("a", { class: "back", href: "#" }, "← Call log"), $("div", { class: "call" }, side, main));
+  window.scrollTo(0, 0);
+  current = c;
+  if (hasAudio) { audio.src = audioSrc(c); audio.playbackRate = rate; }
+}
+const field = (k, v) => $("div", { class: "field" }, $("span", {}, k), $("b", {}, v));
+const NOTE = { question: "Question", question_timeout: "No reply", answer: "You answered", steer: "You steered", say: "You had it say", keys: "Keys", hangup: "You hung up", error: "Error" };
+function lineEl(l, i) {
+  return $("div", { class: `line ${l.who}`, "data-i": i, "data-at": l.at ?? "" },
+    $("button", { class: "t mono", onclick: () => seek(l.at), title: l.at == null ? "Transcribed after the call" : "Play from here" }, l.at == null ? "--:--" : clock(l.at)),
+    $("div", { class: "txt" }, $("span", { class: "who" }, l.who === "them" ? "Them" : "Agent"), l.interrupted && $("span", { class: "cut" }, "cut off"),
+      $("p", {}, l.text)));
+}
+function noteEl(n) {
+  return $("div", { class: `note${n.kind === "error" ? " error" : ""}` }, $("b", {}, `${NOTE[n.kind] || n.kind}${n.qid ? " " + n.qid : ""}`), n.at != null ? $("span", { class: "mono", style: "font-size:12px;color:var(--pencil);margin-right:8px" }, clock(n.at)) : "", n.text);
+}
+function player(c) {
+  const dur = Math.max(c.duration || 0, ...c.lines.map((l) => l.at || 0)) || 1;
+  const strip = $("div", { class: "strip", title: "Click to jump" });
+  c.lines.forEach((l, i) => {
+    if (l.at == null) return;
+    const next = c.lines.slice(i + 1).find((x) => x.at != null && x.at > l.at);
+    const est = l.text.split(/\s+/).length / 2.6;
+    const end = Math.min(next ? next.at : dur, l.at + est);
+    strip.append($("div", { class: `seg ${l.who}`, style: `left:${(l.at / dur) * 100}%;width:${Math.max(0.4, ((end - l.at) / dur) * 100)}%`, title: `${clock(l.at)} ${l.who === "them" ? "Them" : "Agent"}: ${l.text.slice(0, 80)}` }));
+  });
+  c.notes.forEach((n) => n.at != null && strip.append($("div", { class: "flag", style: `left:${(n.at / dur) * 100}%`, title: `${NOTE[n.kind] || n.kind}: ${n.text}` })));
+  const head = $("div", { class: "head", style: "left:0" });
+  const tip = $("div", { class: "hover-tip mono" });
+  strip.append(head);
+  strip.addEventListener("click", (e) => { const r = strip.getBoundingClientRect(); seek(((e.clientX - r.left) / r.width) * (audio.duration || dur), 0); });
+  strip.addEventListener("mousemove", (e) => { const r = strip.getBoundingClientRect(); tip.textContent = clock(((e.clientX - r.left) / r.width) * (audio.duration || dur)); tip.style.left = `${e.clientX - r.left}px`; tip.style.opacity = 1; });
+  strip.addEventListener("mouseleave", () => (tip.style.opacity = 0));
+  const playBtn = $("button", { class: "play", "aria-label": "Play", onclick: toggle }, icon("play"));
+  const clockEl = $("span", { class: "clock mono" }, `00:00 / ${clock(dur)}`);
+  const speed = $("button", { class: "speed mono", onclick: () => { rate = rate === 1 ? 1.5 : rate === 1.5 ? 2 : 1; audio.playbackRate = rate; speed.textContent = `${rate}×`; } }, `${rate}×`);
+  ui = { playBtn, clockEl, head, dur };
+  return $("div", { class: "player" },
+    $("div", { class: "controls" }, playBtn, clockEl, speed,
+      $("div", { class: "legend" }, $("span", {}, $("i", { style: "background:var(--them)" }), "Them"), $("span", {}, $("i", { style: "background:var(--agent)" }), "Agent"), $("span", {}, $("i", { style: "background:var(--note);border:1.5px solid #c9a400" }), "Notes"))),
+    $("div", { style: "position:relative" }, tip, strip));
+}
+const icon = (k) => { const s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("viewBox", "0 0 20 20"); s.innerHTML = k === "play" ? '<path d="M5 3l12 7-12 7z" fill="currentColor"/>' : '<path d="M4 3h4v14H4zM12 3h4v14h-4z" fill="currentColor"/>'; return s; };
+
+let current = null, ui = null, rate = 1, activeI = -1;
+// Lines start a moment before the transcript says, so seeking leads slightly.
+function seek(at, lead = 1) {
+  if (at == null || !current?.recording) return;
+  audio.currentTime = Math.max(0, at - lead);
+  audio.play();
+}
+function toggle() { if (!current?.recording) return; audio.paused ? audio.play() : audio.pause(); }
+audio.addEventListener("play", () => ui && ui.playBtn.replaceChildren(icon("pause")));
+audio.addEventListener("pause", () => ui && ui.playBtn.replaceChildren(icon("play")));
+audio.addEventListener("timeupdate", () => {
+  if (!ui || !current) return;
+  const t = audio.currentTime, dur = audio.duration || ui.dur;
+  ui.clockEl.textContent = `${clock(t)} / ${clock(dur)}`;
+  ui.head.style.left = `${(t / dur) * 100}%`;
+  let i = -1;
+  current.lines.forEach((l, j) => { if (l.at != null && l.at - 0.8 <= t) i = j; });
+  if (i !== activeI) {
+    document.querySelectorAll(".line.active").forEach((el) => el.classList.remove("active"));
+    const el = document.querySelector(`.line[data-i="${i}"]`);
+    if (el) { el.classList.add("active"); if (!audio.paused) el.scrollIntoView({ block: "center", behavior: "smooth" }); }
+    activeI = i;
+  }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT") return;
+  if (e.key === "Escape" && location.hash) { location.hash = ""; return; }
+  if (!current || !location.hash) return;
+  if (e.key === " ") { e.preventDefault(); toggle(); }
+  if (e.key === "ArrowRight") audio.currentTime += 5;
+  if (e.key === "ArrowLeft") audio.currentTime -= 5;
+  if (e.key === "j" || e.key === "k") {
+    const timed = current.lines.map((l, i) => [l.at, i]).filter(([at]) => at != null);
+    const pos = timed.findIndex(([, i]) => i === activeI);
+    const next = timed[Math.max(0, Math.min(timed.length - 1, pos + (e.key === "j" ? 1 : -1)))];
+    if (next) seek(next[0]);
+  }
+});
+
+function route() {
+  const id = location.hash.slice(1) || DATA.initial;
+  DATA.initial = null;
+  const call = DATA.calls.find((c) => c.id === id);
+  current = null; ui = null; activeI = -1;
+  if (call) renderCall(call); else renderLog();
+}
+window.addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>
